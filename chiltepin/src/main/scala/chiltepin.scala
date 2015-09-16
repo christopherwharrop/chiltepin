@@ -7,8 +7,7 @@ object Chiltepin {
   def main(args: Array[String]) {
 
     // Get configuration for the bqserver
-    val configFile = getClass.getClassLoader.getResource("chiltepin.conf").getFile
-    val config = ConfigFactory.parseFile(new File(configFile))
+    val config = ConfigFactory.load()
 
     // Set up actor system
     val system = ActorSystem("Chiltepin",config)

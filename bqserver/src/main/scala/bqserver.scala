@@ -25,8 +25,7 @@ object BQServer {
     val bqServer = TableQuery[BQServer]
 
     // Get configuration for the bqserver
-    val configFile = getClass.getClassLoader.getResource("bqserver.conf").getFile
-    val config = ConfigFactory.parseFile(new File(configFile)).resolve()
+    val config = ConfigFactory.load()
 
     // Instantiate the configured BQServer behavior
     val bqServerType = config.getString("bqserver.type")

@@ -68,7 +68,7 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
 
       }
 
-    case PlaceNotAcquired(t) => throw new IllegalStateException(s"Failed to instantiate: $t")
+    case PlaceNotAcquired(t) => throw new IllegalStateException(s"Failed to acquire place: $t")
 
     // Any other message save for later
     case _ => stash()

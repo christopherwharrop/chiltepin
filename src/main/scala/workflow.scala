@@ -110,14 +110,15 @@ class Workflow extends Actor with Stash {
     // Create an input place actor to supply input to a transition
 //    x = context.actorOf(Props(new Place(h2DB,logger,List("f_of_x","g_of_x"))), name = "x")
 
+    // Create an output place actor to supply output from a transition
+    y = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "y")
+
     // Create a transition actor to run a job on input x
     f_of_x = context.actorOf(Props(new Transition(h2DB,bqStat,bqSub,logger,List("y"))), name = "f_of_x")
 
     // Create a transition actor to run a job on input x
 //    g_of_x = context.actorOf(Props(new Transition(h2DB,bqStat,bqSub,logger,List("z"))), name = "g_of_x")
 
-    // Create an output place actor to supply output from a transition
-    y = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "y")
 
     // Create an output place actor to supply output from a transition
 //    z = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "z")
