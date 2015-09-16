@@ -26,11 +26,13 @@ lazy val bqserver = (project in file("bqserver")).
   settings(commonSettings: _*).
   settings(
     // other settings
+    assemblyJarName in assembly := "bqserver-" + version.value + ".jar"
   ).dependsOn(root)
 
 lazy val chiltepin = (project in file("chiltepin")).
   settings(commonSettings: _*).
   settings(
     // other settings
+    assemblyJarName in assembly := "chiltepin-" + version.value + ".jar"
   ).dependsOn(root)
 
