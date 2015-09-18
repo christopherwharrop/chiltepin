@@ -21,11 +21,15 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
   // Implicit timeout for getting place dependencies
   implicit val timeout = Timeout(1.second)
 
+
+  val updateInterval =context.system.settings.config.getInt("chiltepin.update-interval")
+
   // A map of place names to place actor references
   val placeActors = collection.mutable.Map[String, ActorRef]()
 
   // Submission options
-  val options = "-A jetmgmt -l procs=1,partition=njet"
+//  val options = "-A jetmgmt -l procs=1,partition=njet"
+  val options = "-A nesccmgmt -l procs=1 -l walltime=00:05:00"
 
   var statusRequest: Cancellable = null
 
@@ -90,8 +94,8 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
       logger ! Logger.Info(s"Submitted job $jobid",2)
       logger ! Logger.Info("Subscribing to job events",2)
       bqStat ! BqStat.WatchJob(self,jobid)
-      statusRequest = context.system.scheduler.schedule(15.seconds,
-                                                  15.seconds,
+      statusRequest = context.system.scheduler.schedule(updateInterval.seconds,
+                                                  updateInterval.seconds,
                                                   bqStat,
                                                   BqStat.StatusRequest(jobid))
 

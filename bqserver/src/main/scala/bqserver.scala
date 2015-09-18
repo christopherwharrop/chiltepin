@@ -1,6 +1,8 @@
 import akka.actor._
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
 import java.io.File
+import java.io.PrintWriter
 import akka.routing.FromConfig
 import akka.actor.{ Address, AddressFromURIString }
 import scala.slick.driver.H2Driver.simple._
@@ -24,8 +26,32 @@ object BQServer {
     }
     val bqServer = TableQuery[BQServer]
 
-    // Get configuration for the bqserver
-    val config = ConfigFactory.load()
+    // Get default configuration for the bqserver
+    val defaultConfig = ConfigFactory.load()
+
+    // Compute the user's chiltepin directory
+    val chiltepinDir = sys.env("HOME") + "/.chiltepin"
+
+    // Create chiltepin var dir
+    val varDir = new java.io.File(chiltepinDir + "/var")
+    if (! varDir.exists) varDir.mkdirs
+
+    // Create chiltepin etc dir
+    val etcDir = new java.io.File(chiltepinDir + "/etc")
+    if (! etcDir.exists) etcDir.mkdirs
+
+    // Update the config if needed
+    val bqServerConfigFile = new java.io.File(chiltepinDir + "/etc/bqserver.conf")
+    if (! bqServerConfigFile.exists) {
+      new PrintWriter(chiltepinDir + "/etc/bqserver.conf") { write("bqserver " + defaultConfig.getConfig("bqserver").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
+    }
+
+    // Load the user's config
+    val userConfig = ConfigFactory.parseFile(bqServerConfigFile)
+
+    // Load the user's config merged with default config
+    val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
+
 
     // Instantiate the configured BQServer behavior
     val bqServerType = config.getString("bqserver.type")
