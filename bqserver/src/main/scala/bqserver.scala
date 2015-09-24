@@ -70,7 +70,7 @@ object BQServer {
     // Get actor system's hostname and port number
     val host = ExternalAddress(system).addressForAkka.host.getOrElse("")
     val port = ExternalAddress(system).addressForAkka.port.getOrElse(0)
-    val address = Seq(AddressFromURIString(s"akka.tcp://BQServer@$host:$port"))
+    val address = Seq(AddressFromURIString(s"akka.ssl.tcp://BQServer@$host:$port"))
 
     // Record actor system's host/port in the services database
     val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services", driver = "org.h2.Driver")

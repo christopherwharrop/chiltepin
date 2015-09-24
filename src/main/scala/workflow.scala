@@ -73,10 +73,10 @@ class Workflow extends Actor with Stash {
     h2DB ! H2DB.GetReady
 
     // Create bqstat actor for tracking job state
-    context.actorSelection(s"akka.tcp://BQServer@$bqHost:$bqPort/user/bqStat") ! Identify(BQStatID)
+    context.actorSelection(s"akka.ssl.tcp://BQServer@$bqHost:$bqPort/user/bqStat") ! Identify(BQStatID)
 
     // Create bqsub actor for submitting jobs 
-    context.actorSelection(s"akka.tcp://BQServer@$bqHost:$bqPort/user/bqSub") ! Identify(BQSubID)
+    context.actorSelection(s"akka.ssl.tcp://BQServer@$bqHost:$bqPort/user/bqSub") ! Identify(BQSubID)
 
   }
 
