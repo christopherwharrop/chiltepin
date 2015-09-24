@@ -28,8 +28,8 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
   val placeActors = collection.mutable.Map[String, ActorRef]()
 
   // Submission options
-//  val options = "-A jetmgmt -l procs=1,partition=njet"
-  val options = "-A nesccmgmt -l procs=1 -l walltime=00:05:00"
+  val options = "-A jetmgmt -l procs=1,partition=njet"
+//  val options = "-A nesccmgmt -l procs=1 -l walltime=00:05:00"
 
   var statusRequest: Cancellable = null
 

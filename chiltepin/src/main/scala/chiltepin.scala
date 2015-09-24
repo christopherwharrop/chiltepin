@@ -22,17 +22,22 @@ object Chiltepin {
     val etcDir = new java.io.File(chiltepinDir + "/etc")
     if (! etcDir.exists) etcDir.mkdirs
 
-    // Update the config if needed
+    // Compute the name of the user config file
     val chiltepinConfigFile = new java.io.File(chiltepinDir + "/etc/chiltepin.conf")
-    if (! chiltepinConfigFile.exists) {
-      new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + defaultConfig.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
-    }
 
-    // Load the user's config
-    val userConfig = ConfigFactory.parseFile(chiltepinConfigFile)
+    // Get the current user config
+    val userConfig = if (chiltepinConfigFile.exists) {
+      ConfigFactory.parseFile(chiltepinConfigFile)
+    }
+    else {
+      defaultConfig.getConfig("chiltepin")
+    }
 
     // Load the user's config merged with default config
     val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
+
+    // Update the user config file to make sure it is up-to-date with the current options
+    new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
 
     // Set up actor system
     val system = ActorSystem("Chiltepin",config)

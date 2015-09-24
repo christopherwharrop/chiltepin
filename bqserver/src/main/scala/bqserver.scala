@@ -40,18 +40,22 @@ object BQServer {
     val etcDir = new java.io.File(chiltepinDir + "/etc")
     if (! etcDir.exists) etcDir.mkdirs
 
-    // Update the config if needed
+    // Compute the name of the user config file
     val bqServerConfigFile = new java.io.File(chiltepinDir + "/etc/bqserver.conf")
-    if (! bqServerConfigFile.exists) {
-      new PrintWriter(chiltepinDir + "/etc/bqserver.conf") { write("bqserver " + defaultConfig.getConfig("bqserver").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
-    }
 
-    // Load the user's config
-    val userConfig = ConfigFactory.parseFile(bqServerConfigFile)
+    // Get the current user config
+    val userConfig = if (bqServerConfigFile.exists) {
+      ConfigFactory.parseFile(bqServerConfigFile)
+    }
+    else {
+      defaultConfig.getConfig("bqserver")
+    }
 
     // Load the user's config merged with default config
     val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
 
+    // Update the user config file to make sure it is up-to-date with the current options
+    new PrintWriter(chiltepinDir + "/etc/bqserver.conf") { write("bqserver " + config.getConfig("bqserver").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
 
     // Instantiate the configured BQServer behavior
     val bqServerType = config.getString("bqserver.type")
