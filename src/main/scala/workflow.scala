@@ -31,7 +31,7 @@ class Workflow extends Actor with Stash {
   }
   val bqServer = TableQuery[BQServer]
 
-  val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services;DB_CLOSE_DELAY=-1", driver = "org.h2.Driver")
+  val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
 
 
   // Initialize children

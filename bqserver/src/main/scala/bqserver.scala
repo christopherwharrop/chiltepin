@@ -73,7 +73,7 @@ object BQServer {
     val address = Seq(AddressFromURIString(s"akka.ssl.tcp://BQServer@$host:$port"))
 
     // Record actor system's host/port in the services database
-    val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services", driver = "org.h2.Driver")
+    val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
     db.withSession {
       implicit session =>
       if (MTable.getTables("BQSERVER").list().isEmpty) {
