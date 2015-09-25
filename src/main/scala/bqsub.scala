@@ -42,7 +42,7 @@ class BqSub(bqBehavior: BQBehavior, logger: ActorRef) extends Actor with RunComm
       result.jobId match {
         case Some(jobId) => requestor ! Transition.SubmitSucceeded(jobId)
         case None => requestor ! Transition.SubmitFailed(result.error)
-      }      
+      }
   }
 
 }
