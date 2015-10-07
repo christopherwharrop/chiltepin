@@ -85,6 +85,7 @@ class Workflow extends Actor with Stash {
 
     case ActorIdentity(BQSubID, Some(ref)) => 
         bqSub = ref
+        context.watch(bqSub)
         init = init + 1
         if (init == 3) {
           unstashAll()
@@ -93,6 +94,7 @@ class Workflow extends Actor with Stash {
     case ActorIdentity(BQSubID, None) => println("Didn't find bqsub")
     case ActorIdentity(BQStatID, Some(ref)) => 
         bqStat = ref
+        context.watch(bqStat)
         init = init + 2
         if (init == 3) {
           unstashAll()

@@ -17,7 +17,7 @@ class H2DB(logger: ActorRef) extends Actor {
   import H2DB._
   implicit val ec = context.dispatcher
 
-  val db = Database.forURL("jdbc:h2:~/test/test;DB_CLOSE_DELAY=-1", driver = "org.h2.Driver")
+  val db = Database.forURL("jdbc:h2:~/test/test;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
 
   class Jobs(tag: Tag) extends Table[(String, String)](tag, "JOBS") {
     def id = column[String]("JOBID", O.PrimaryKey) // This is the primary key column
