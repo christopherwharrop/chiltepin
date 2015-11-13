@@ -64,12 +64,15 @@ object BQServer {
       case _ => throw new RuntimeException(s"Unknown batch system: $bqServerType")
     }
 
-    // Set up actor system for batch system services
-    val system = ActorSystem("BQServer", config)
+    // Set up back end actor system for batch system services
+    val systemBackEnd = ActorSystem("BQBackEnd", config)
+
+    // Set up back end actor system for batch system services
+    val systemServer = ActorSystem("BQServer", config)
 
     // Get actor system's hostname and port number
-    val host = ExternalAddress(system).addressForAkka.host.getOrElse("")
-    val port = ExternalAddress(system).addressForAkka.port.getOrElse(0)
+    val host = ExternalAddress(systemServer).addressForAkka.host.getOrElse("")
+    val port = ExternalAddress(systemServer).addressForAkka.port.getOrElse(0)
     val address = Seq(AddressFromURIString(s"akka.ssl.tcp://BQServer@$host:$port"))
 
     // Record actor system's host/port in the services database
@@ -86,13 +89,17 @@ object BQServer {
     }
 
     // Create the logging actor
-    val logger = system.actorOf(Props(new Logger), name = "logger")
+    val logger = systemServer.actorOf(Props(new Logger), name = "logger")
 
     // Create the BqStat actor
-    val bqStat = system.actorOf(BqStat.props(bqBehavior, logger), "bqStat")
+    val bqStat = systemServer.actorOf(BqStat.props(bqBehavior, logger), "bqStat")
 
     // Create the BqSub router pool
-    val bqSub = system.actorOf(FromConfig.props(BqSub.props(bqBehavior, logger)), "bqSub")
+    val bqSub = systemServer.actorOf(FromConfig.props(BqSub.props(bqBehavior, logger)), "bqSub")
+
+    // Create the bqGateway actor
+    val bqGateway = systemServer.actorOf(BqGateway.props(bqStat, bqSub, logger), "bqGateway")
+
 
   }
 
