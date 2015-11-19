@@ -15,12 +15,12 @@ object BqStat {
   def props(bqBehavior: BQBehavior, logger: ActorRef): Props = Props(new BqStat(bqBehavior, logger))
 
   // BqStat messages
-  case object GetUpdate
-  case class  Update(queue: BQStatusResult) 
-  case class  WatchJob(requestor: ActorRef,jobId: String)
-  case class  UnwatchJob(requestor: ActorRef,jobId: String)
-  case class  StatusRequest(jobId: String)
-  case object Showq
+  case object GetUpdate extends PossiblyHarmful
+  case class  Update(queue: BQStatusResult) extends PossiblyHarmful
+  case class  WatchJob(requestor: ActorRef,jobId: String) extends PossiblyHarmful
+  case class  UnwatchJob(requestor: ActorRef,jobId: String) extends PossiblyHarmful
+  case class  StatusRequest(jobId: String) extends PossiblyHarmful
+  case object Showq extends PossiblyHarmful
 
 }
 

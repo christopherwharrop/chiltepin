@@ -13,8 +13,10 @@ object BqGateway {
   def props(bqStat: ActorRef, bqSub: ActorRef, logger: ActorRef): Props = Props(new BqGateway(bqStat,bqSub,logger))
 
   // BqGateway messages
-//  case class Submit(script: String, options: String)
-//  case class SubmitResult(requestor: ActorRef, result: BqGatewayymitResult)
+  case class Submit(script: String, options: String)
+  case class WatchJob(requestor: ActorRef,jobId: String)
+  case class StatusRequest(jobId: String)
+  case class UnwatchJob(requestor: ActorRef,jobId: String)
 
 }
 
@@ -26,6 +28,8 @@ object BqGateway {
 class BqGateway(bqStat: ActorRef, bqSub: ActorRef, logger: ActorRef) extends Actor with RunCommand {
 
   import BqGateway._
+  import BqStat._
+  import BqSub._
 
   implicit val ec = context.dispatcher
 
@@ -35,15 +39,12 @@ class BqGateway(bqStat: ActorRef, bqSub: ActorRef, logger: ActorRef) extends Act
   //
   ///////////////////////////////////////////////////
   def receive = {
+      case BqGateway.Submit(script,options) => bqSub forward BqSub.Submit(script,options)
+      case BqGateway.WatchJob(subscriber,jobid) => bqStat forward BqStat.WatchJob(subscriber,jobid)
+      case BqGateway.StatusRequest(jobId) => bqStat forward BqStat.StatusRequest(jobId)
+      case BqGateway.UnwatchJob(subscriber,jobid) => bqStat forward BqStat.UnwatchJob(subscriber,jobid)
+
       case _ => println("Not implemented")
-//    case Submit(script,options) =>
-//      val requestor = sender
-//      val qsub = Future(bqBehavior.submit(script,options)) map { result => SubmitResult(requestor, result) } pipeTo self
-//    case SubmitResult(requestor, result) =>
-//      result.jobId match {
-//        case Some(jobId) => requestor ! Transition.SubmitSucceeded(jobId)
-//        case None => requestor ! Transition.SubmitFailed(result.error)
-//      }
   }
 
 }

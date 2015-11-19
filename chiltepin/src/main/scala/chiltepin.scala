@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigRenderOptions
 import java.io.File
 import java.io.PrintWriter
 
-object Chiltepin {
+object Chiltepin extends RunCommand {
 
   def main(args: Array[String]) {
 

@@ -9,20 +9,26 @@ import H2DB._
 object Workflow {
   case object GetReady
   case object H2DBReady
-  case object BqStatReady
-  case object BqSubReady
   case object TransitionReady
   case object Run
   case object Done
-  val BQSubID = "bqSub"
-  val BQStatID = "bqStat"
+  val BQGatewayID = "bqGateway"
 }
 
-class Workflow extends Actor with Stash {
+class Workflow extends Actor with Stash with RunCommand {
 
   import Workflow._
   implicit val ec = context.dispatcher
 
+  // Get username for this process
+  val whoami = runCommand("id -un")
+  val myUsername = if (whoami.status == 0) {
+    whoami.stdout.stripLineEnd
+  }
+  else {
+    throw new RuntimeException(whoami.stderr)
+  }
+  println(myUsername)
 
   class BQServer(tag: Tag) extends Table[(String, Int)](tag, "BQSERVER") {
     def host = column[String]("HOST", O.PrimaryKey) // This is the primary key column
@@ -33,12 +39,10 @@ class Workflow extends Actor with Stash {
 
   val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
 
-
   // Initialize children
   var logger: ActorRef = context.system.deadLetters
   var h2DB: ActorRef = context.system.deadLetters
-  var bqStat: ActorRef = context.system.deadLetters
-  var bqSub: ActorRef = context.system.deadLetters
+  var bqGateway: ActorRef = context.system.deadLetters
   var x: ActorRef = context.system.deadLetters
   var f_of_x: ActorRef = context.system.deadLetters
   var g_of_x: ActorRef = context.system.deadLetters
@@ -46,7 +50,6 @@ class Workflow extends Actor with Stash {
   var z: ActorRef = context.system.deadLetters
 
   var init: Int = 0
-
 
   // Create children before actor starts
   override def preStart() {
@@ -64,7 +67,6 @@ class Workflow extends Actor with Stash {
       bqPort = result._2
     }
 
-
     // Create a logger actor for logging workflow events
     logger = context.actorOf(Props[Logger], name = "logger")
 
@@ -72,35 +74,19 @@ class Workflow extends Actor with Stash {
     h2DB = context.actorOf(Props(new H2DB(logger)), name = "h2DB")
     h2DB ! H2DB.GetReady
 
-    // Create bqstat actor for tracking job state
-    context.actorSelection(s"akka.ssl.tcp://BQServer@$bqHost:$bqPort/user/bqStat") ! Identify(BQStatID)
-
-    // Create bqsub actor for submitting jobs 
-    context.actorSelection(s"akka.ssl.tcp://BQServer@$bqHost:$bqPort/user/bqSub") ! Identify(BQSubID)
+    // Create bqGateway actor for submitting bq requests
+    context.actorSelection(s"akka.ssl.tcp://BQServer@$bqHost:$bqPort/user/bqGateway") ! Identify(BQGatewayID)
 
   }
 
 
   def uninitialized: Receive = {
 
-    case ActorIdentity(BQSubID, Some(ref)) => 
-        bqSub = ref
-//        context.watch(bqSub)
-        init = init + 1
-        if (init == 3) {
-          unstashAll()
-          context.become(initialized)
-        }
-    case ActorIdentity(BQSubID, None) => println("Didn't find bqsub")
-    case ActorIdentity(BQStatID, Some(ref)) => 
-        bqStat = ref
-//        context.watch(bqStat)
-        init = init + 2
-        if (init == 3) {
-          unstashAll()
-          context.become(initialized)
-        }
-    case ActorIdentity(BQStatID, None) => println("Didn't find bqstat")
+    case ActorIdentity(BQGatewayID, Some(ref)) =>
+      bqGateway = ref
+      unstashAll()
+      context.become(initialized)
+    case ActorIdentity(BQGatewayID, None) => println("Didn't find bqGateway")
     case _ => stash()
   }
 
@@ -116,10 +102,10 @@ class Workflow extends Actor with Stash {
     y = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "y")
 
     // Create a transition actor to run a job on input x
-    f_of_x = context.actorOf(Props(new Transition(h2DB,bqStat,bqSub,logger,List("y"))), name = "f_of_x")
+    f_of_x = context.actorOf(Props(new Transition(h2DB,bqGateway,logger,List("y"))), name = "f_of_x")
 
     // Create a transition actor to run a job on input x
-//    g_of_x = context.actorOf(Props(new Transition(h2DB,bqStat,bqSub,logger,List("z"))), name = "g_of_x")
+//    g_of_x = context.actorOf(Props(new Transition(h2DB,bqGateway,logger,List("z"))), name = "g_of_x")
 
 
     // Create an output place actor to supply output from a transition

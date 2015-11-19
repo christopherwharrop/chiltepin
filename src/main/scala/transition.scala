@@ -13,7 +13,7 @@ object Transition {
   case class StateUpdate(job: BQJob)
 }
 
-class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: ActorRef, placeNames: List[String]) extends Actor with Stash {
+class Transition(h2DB: ActorRef, bqGateway: ActorRef, logger: ActorRef, placeNames: List[String]) extends Actor with Stash {
 
   import Transition._
   implicit val ec = context.dispatcher
@@ -83,7 +83,7 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
 
     case Run(cmd) => 
       logger ! Logger.Info("Asking bqsub to submit the job",2)
-      bqSub ! BqSub.Submit(cmd, options)
+      bqGateway ! BqGateway.Submit(cmd, options)
     case SubmitFailed(bqError) => 
       bqError match {
         case Some(error) => logger ! Logger.Info(s"ERROR: Could not submit job.  ${error.message}",2)
@@ -93,11 +93,11 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
       h2DB ! H2DB.AddJob(jobid,"Submitted")
       logger ! Logger.Info(s"Submitted job $jobid",2)
       logger ! Logger.Info("Subscribing to job events",2)
-      bqStat ! BqStat.WatchJob(self,jobid)
+      bqGateway ! BqGateway.WatchJob(self,jobid)
       statusRequest = context.system.scheduler.schedule(updateInterval.seconds,
                                                   updateInterval.seconds,
-                                                  bqStat,
-                                                  BqStat.StatusRequest(jobid))
+                                                  bqGateway,
+                                                  BqGateway.StatusRequest(jobid))
 
     case StateUpdate(job) => 
       h2DB ! H2DB.UpdateJob(job.jobId,job.state)      
@@ -105,7 +105,7 @@ class Transition(h2DB: ActorRef, bqStat: ActorRef, bqSub: ActorRef, logger: Acto
       if (job.state == "Complete") {
         statusRequest.cancel()
         logger ! Logger.Info(s"Unsubscribing from job ${job.jobId}",2)
-        bqStat ! BqStat.UnwatchJob(self,job.jobId)
+        bqGateway ! BqGateway.UnwatchJob(self,job.jobId)
         context.system.shutdown()
       }
 

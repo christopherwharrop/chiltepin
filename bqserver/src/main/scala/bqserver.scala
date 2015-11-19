@@ -53,6 +53,8 @@ object BQServer {
 
     // Load the user's config merged with default config
     val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
+    val gatewayConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("bqgateway")).withFallback(config))
+    val workerConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("bqworker")).withFallback(config))
 
     // Update the user config file to make sure it is up-to-date with the current options
     new PrintWriter(chiltepinDir + "/etc/bqserver.conf") { write("bqserver " + config.getConfig("bqserver").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
@@ -65,10 +67,10 @@ object BQServer {
     }
 
     // Set up back end actor system for batch system services
-    val systemBackEnd = ActorSystem("BQBackEnd", config)
+    val systemWorker = ActorSystem("BQWorker", workerConfig)
 
     // Set up back end actor system for batch system services
-    val systemServer = ActorSystem("BQServer", config)
+    val systemServer = ActorSystem("BQServer", gatewayConfig)
 
     // Get actor system's hostname and port number
     val host = ExternalAddress(systemServer).addressForAkka.host.getOrElse("")
@@ -89,13 +91,13 @@ object BQServer {
     }
 
     // Create the logging actor
-    val logger = systemServer.actorOf(Props(new Logger), name = "logger")
+    val logger = systemWorker.actorOf(Props(new Logger), name = "logger")
 
     // Create the BqStat actor
-    val bqStat = systemServer.actorOf(BqStat.props(bqBehavior, logger), "bqStat")
+    val bqStat = systemWorker.actorOf(BqStat.props(bqBehavior, logger), "bqStat")
 
     // Create the BqSub router pool
-    val bqSub = systemServer.actorOf(FromConfig.props(BqSub.props(bqBehavior, logger)), "bqSub")
+    val bqSub = systemWorker.actorOf(FromConfig.props(BqSub.props(bqBehavior, logger)), "bqSub")
 
     // Create the bqGateway actor
     val bqGateway = systemServer.actorOf(BqGateway.props(bqStat, bqSub, logger), "bqGateway")

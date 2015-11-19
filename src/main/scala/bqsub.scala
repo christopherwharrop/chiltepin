@@ -13,7 +13,7 @@ object BqSub {
   def props(bqBehavior: BQBehavior, logger: ActorRef): Props = Props(new BqSub(bqBehavior,logger))
 
   // BqSub messages
-  case class Submit(script: String, options: String)
+  case class Submit(script: String, options: String) extends PossiblyHarmful
   case class SubmitResult(requestor: ActorRef, result: BQSubmitResult)
 
 }
