@@ -14,9 +14,12 @@ object ExternalAddress extends ExtensionKey[ExternalAddressExt]
   def addressForAkka: Address = system.provider.getDefaultAddress
 }
 
-object BQServer {
+object BQServer extends WhoAmI {
 
   def main(args: Array[String]) {
+
+    // Get owner of this process
+    val whoami = whoAmI()
 
     // Set up database access
     class BQServer(tag: Tag) extends Table[(String, Int)](tag, "BQSERVER") {
@@ -30,7 +33,7 @@ object BQServer {
     val defaultConfig = ConfigFactory.load()
 
     // Compute the user's chiltepin directory
-    val chiltepinDir = sys.env("HOME") + "/.chiltepin"
+    val chiltepinDir = whoami.home + "/.chiltepin"
 
     // Create chiltepin var dir
     val varDir = new java.io.File(chiltepinDir + "/var")
@@ -78,7 +81,7 @@ object BQServer {
     val address = Seq(AddressFromURIString(s"akka.ssl.tcp://BQServer@$host:$port"))
 
     // Record actor system's host/port in the services database
-    val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
+    val db = Database.forURL(s"jdbc:h2:${whoami.home}/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
     db.withSession {
       implicit session =>
       if (MTable.getTables("BQSERVER").list().isEmpty) {

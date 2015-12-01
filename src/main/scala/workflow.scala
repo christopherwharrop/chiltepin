@@ -15,20 +15,13 @@ object Workflow {
   val BQGatewayID = "bqGateway"
 }
 
-class Workflow extends Actor with Stash with RunCommand {
+class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
   import Workflow._
   implicit val ec = context.dispatcher
 
-  // Get username for this process
-  val whoami = runCommand("id -un")
-  val myUsername = if (whoami.status == 0) {
-    whoami.stdout.stripLineEnd
-  }
-  else {
-    throw new RuntimeException(whoami.stderr)
-  }
-  println(myUsername)
+  // Get owner of this process
+  val whoami = whoAmI()
 
   class BQServer(tag: Tag) extends Table[(String, Int)](tag, "BQSERVER") {
     def host = column[String]("HOST", O.PrimaryKey) // This is the primary key column
@@ -37,7 +30,7 @@ class Workflow extends Actor with Stash with RunCommand {
   }
   val bqServer = TableQuery[BQServer]
 
-  val db = Database.forURL("jdbc:h2:/home/Christopher.W.Harrop/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
+  val db = Database.forURL(s"jdbc:h2:${whoami.home}/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
 
   // Initialize children
   var logger: ActorRef = context.system.deadLetters
