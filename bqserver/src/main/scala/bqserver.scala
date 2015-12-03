@@ -65,7 +65,9 @@ object BQServer extends WhoAmI {
     // Instantiate the configured BQServer behavior
     val bqServerType = config.getString("bqserver.type")
     val bqBehavior = bqServerType.toUpperCase match {
+      case "TORQUE" => new TorqueBehavior
       case "MOAB-TORQUE" => new MoabTorqueBehavior
+      case "LSF" => new LSFBehavior
       case _ => throw new RuntimeException(s"Unknown batch system: $bqServerType")
     }
 
