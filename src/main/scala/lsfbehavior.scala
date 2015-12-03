@@ -86,7 +86,7 @@ class LSFBehavior extends BQBehavior {
     for (line <- fixedString.split("\\n")) {
       line match {
         case jobStateRegEx(jobId,nativeState) => jobQueue(jobId) = BQJob(jobId, stateMap.getOrElse(nativeState,"Unknown"), nativeState)
-        case _ => println(line)
+//        case _ => println(line)
       }
     }
 
