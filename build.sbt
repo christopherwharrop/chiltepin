@@ -28,13 +28,25 @@ lazy val bqserver = (project in file("bqserver")).
   settings(commonSettings: _*).
   settings(
     // other settings
-    assemblyJarName in assembly := "bqserver-" + version.value + ".jar"
+    assemblyJarName in assembly := "bqserver-" + version.value + ".jar",
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+      {
+        case x if x  startsWith "com/sun/jna/Structure" => MergeStrategy.first
+        case x => old(x)
+      }
+    }
   ).dependsOn(root)
 
 lazy val chiltepin = (project in file("chiltepin")).
   settings(commonSettings: _*).
   settings(
     // other settings
-    assemblyJarName in assembly := "chiltepin-" + version.value + ".jar"
+    assemblyJarName in assembly := "chiltepin-" + version.value + ".jar",
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+      {
+        case x if x  startsWith "com/sun/jna/Structure" => MergeStrategy.first
+        case x => old(x)
+      }
+    }
   ).dependsOn(root)
 
