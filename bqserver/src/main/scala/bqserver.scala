@@ -30,7 +30,7 @@ object BQServer extends WhoAmI {
     val bqServer = TableQuery[BQServer]
 
     // Get default configuration for the bqserver
-    val defaultConfig = ConfigFactory.load()
+    val defaultConfig = ConfigFactory.load().getConfig("chiltepin")
 
     // Compute the user's chiltepin directory
     val chiltepinDir = whoami.home + "/.chiltepin"
@@ -44,14 +44,14 @@ object BQServer extends WhoAmI {
     if (! etcDir.exists) etcDir.mkdirs
 
     // Compute the name of the user config file
-    val bqServerConfigFile = new java.io.File(chiltepinDir + "/etc/bqserver.conf")
+    val bqServerConfigFile = new java.io.File(chiltepinDir + "/etc/chiltepin.conf")
 
     // Get the current user config
     val userConfig = if (bqServerConfigFile.exists) {
-      ConfigFactory.parseFile(bqServerConfigFile)
+      ConfigFactory.parseFile(bqServerConfigFile).getConfig("chiltepin")
     }
     else {
-      defaultConfig.getConfig("bqserver")
+      defaultConfig
     }
 
     // Load the user's config merged with default config
@@ -60,7 +60,7 @@ object BQServer extends WhoAmI {
     val workerConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("bqworker")).withFallback(config))
 
     // Update the user config file to make sure it is up-to-date with the current options
-    new PrintWriter(chiltepinDir + "/etc/bqserver.conf") { write("bqserver " + config.getConfig("bqserver").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
+    new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
 
     // Instantiate the configured BQServer behavior
     val bqServerType = config.getString("bqserver.type")

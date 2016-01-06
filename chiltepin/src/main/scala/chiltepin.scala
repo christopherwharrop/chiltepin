@@ -15,7 +15,7 @@ object Chiltepin extends RunCommand with WhoAmI {
     val whoami = whoAmI()
 
     // Get default configuration for the chiltepin
-    val defaultConfig = ConfigFactory.load()
+    val defaultConfig = ConfigFactory.load().getConfig("chiltepin")
 
     // Compute the user's chiltepin directory
     val chiltepinDir = whoami.home + "/.chiltepin"
@@ -33,10 +33,10 @@ object Chiltepin extends RunCommand with WhoAmI {
 
     // Get the current user config
     val userConfig = if (chiltepinConfigFile.exists) {
-      ConfigFactory.parseFile(chiltepinConfigFile)
+      ConfigFactory.parseFile(chiltepinConfigFile).getConfig("chiltepin")
     }
     else {
-      defaultConfig.getConfig("chiltepin")
+      defaultConfig
     }
 
     // Load the user's config merged with default config

@@ -106,9 +106,10 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
 
 
+    f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
 // jet, theia     f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
 // yellowstone      f_of_x ! Transition.Run("/glade/u/home/harrop/test/test.sh")
-    f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")
+// wcoss    f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")
     case Terminated(deadActor) =>
       println(deadActor.path.name + " has died")
     case Done => 
