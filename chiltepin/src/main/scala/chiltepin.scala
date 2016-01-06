@@ -41,12 +41,13 @@ object Chiltepin extends RunCommand with WhoAmI {
 
     // Load the user's config merged with default config
     val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
+    val workflowConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("workflow")).withFallback(config))
 
     // Update the user config file to make sure it is up-to-date with the current options
     new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
 
     // Set up actor system
-    val system = ActorSystem("Chiltepin",config)
+    val system = ActorSystem("Chiltepin",workflowConfig)
 
     // Create the Workflow actor
     val workflow = system.actorOf(Props[Workflow], name = "workflow")
