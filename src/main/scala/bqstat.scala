@@ -35,7 +35,7 @@ class BqStat(bqBehavior: BQBehavior, logger: ActorRef) extends Actor with RunCom
 
   implicit val ec = context.dispatcher
 
-  val updateInterval = context.system.settings.config.getInt("bqserver.bqstat.update-interval")
+  val updateInterval = context.system.settings.config.getInt("bqstat.update-interval")
   var statusMap = collection.mutable.Map[String, BQJob]()
   var watchingMap = collection.mutable.Map[ActorRef, List[String]]()
   var schedUp = true

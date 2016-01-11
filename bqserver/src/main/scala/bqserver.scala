@@ -29,9 +29,6 @@ object BQServer extends WhoAmI {
     }
     val bqServer = TableQuery[BQServer]
 
-    // Get default configuration for the bqserver
-    val defaultConfig = ConfigFactory.load().getConfig("chiltepin")
-
     // Compute the user's chiltepin directory
     val chiltepinDir = whoami.home + "/.chiltepin"
 
@@ -46,24 +43,35 @@ object BQServer extends WhoAmI {
     // Compute the name of the user config file
     val bqServerConfigFile = new java.io.File(chiltepinDir + "/etc/chiltepin.conf")
 
+    // Get default configuration for the chiltepin
+    val defaultConfig = ConfigFactory.load()
+
     // Get the current user config
-    val userConfig = if (bqServerConfigFile.exists) {
-      ConfigFactory.parseFile(bqServerConfigFile).getConfig("chiltepin")
+    val config = if (bqServerConfigFile.exists) {
+      ConfigFactory.parseFile(bqServerConfigFile).withFallback(defaultConfig)
     }
     else {
       defaultConfig
     }
 
+    // Get the server mode
+    val serverMode = config.getString("chiltepin.server-mode")
+
+    // Get the workflow config for the selected server mode
+    val gatewayConfig = (serverMode.toLowerCase match {
+      case "no-server-mode" => config.getConfig("chiltepin.no-server-mode")
+      case "auto-server-mode" => config.getConfig("chiltepin.auto-server-mode")
+      case "full-server-mode" => config.getConfig("chiltepin.full-server-mode")
+    }).withFallback(config.getConfig("chiltepin.bqgateway"))
+
     // Load the user's config merged with default config
-    val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
-    val gatewayConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("bqgateway")).withFallback(config))
-    val workerConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("bqworker")).withFallback(config))
+    val workerConfig = config.getConfig("chiltepin.bqworker").withFallback(config.getConfig("chiltepin.bqserver"))
 
     // Update the user config file to make sure it is up-to-date with the current options
     new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
 
     // Instantiate the configured BQServer behavior
-    val bqServerType = config.getString("bqserver.type")
+    val bqServerType = config.getString("chiltepin.bqserver.batch-system")
     val bqBehavior = bqServerType.toUpperCase match {
       case "TORQUE" => new TorqueBehavior
       case "MOAB-TORQUE" => new MoabTorqueBehavior

@@ -14,9 +14,6 @@ object Chiltepin extends RunCommand with WhoAmI {
     // Get owner of this process
     val whoami = whoAmI()
 
-    // Get default configuration for the chiltepin
-    val defaultConfig = ConfigFactory.load().getConfig("chiltepin")
-
     // Compute the user's chiltepin directory
     val chiltepinDir = whoami.home + "/.chiltepin"
 
@@ -31,17 +28,26 @@ object Chiltepin extends RunCommand with WhoAmI {
     // Compute the name of the user config file
     val chiltepinConfigFile = new java.io.File(chiltepinDir + "/etc/chiltepin.conf")
 
+    // Get default configuration for the chiltepin
+    val defaultConfig = ConfigFactory.load()
+
     // Get the current user config
-    val userConfig = if (chiltepinConfigFile.exists) {
-      ConfigFactory.parseFile(chiltepinConfigFile).getConfig("chiltepin")
+    val config = if (chiltepinConfigFile.exists) {
+      ConfigFactory.parseFile(chiltepinConfigFile).withFallback(defaultConfig)
     }
     else {
       defaultConfig
     }
 
-    // Load the user's config merged with default config
-    val config = ConfigFactory.load(userConfig.withFallback(defaultConfig))
-    val workflowConfig = ConfigFactory.load(userConfig.withFallback(defaultConfig.getConfig("workflow")).withFallback(config))
+    // Get the server mode
+    val serverMode = config.getString("chiltepin.server-mode")
+
+    // Get the workflow config for the selected server mode
+    val workflowConfig = config.getConfig("chiltepin.workflow").withFallback(serverMode.toLowerCase match {
+      case "no-server-mode" => config.getConfig("chiltepin.no-server-mode")
+      case "auto-server-mode" => config.getConfig("chiltepin.auto-server-mode")
+      case "full-server-mode" => config.getConfig("chiltepin.full-server-mode")
+    })
 
     // Update the user config file to make sure it is up-to-date with the current options
     new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
