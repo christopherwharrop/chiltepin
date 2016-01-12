@@ -43,11 +43,7 @@ object Chiltepin extends RunCommand with WhoAmI {
     val serverMode = config.getString("chiltepin.server-mode")
 
     // Get the workflow config for the selected server mode
-    val workflowConfig = config.getConfig("chiltepin.workflow").withFallback(serverMode.toLowerCase match {
-      case "no-server-mode" => config.getConfig("chiltepin.no-server-mode")
-      case "auto-server-mode" => config.getConfig("chiltepin.auto-server-mode")
-      case "full-server-mode" => config.getConfig("chiltepin.full-server-mode")
-    })
+    val workflowConfig = config.getConfig(s"chiltepin.workflow.$serverMode").withFallback(config.getConfig("chiltepin.workflow"))
 
     // Update the user config file to make sure it is up-to-date with the current options
     new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }

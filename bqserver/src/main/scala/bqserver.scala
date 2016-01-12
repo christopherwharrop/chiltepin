@@ -58,11 +58,7 @@ object BQServer extends WhoAmI {
     val serverMode = config.getString("chiltepin.server-mode")
 
     // Get the workflow config for the selected server mode
-    val gatewayConfig = (serverMode.toLowerCase match {
-      case "no-server-mode" => config.getConfig("chiltepin.no-server-mode")
-      case "auto-server-mode" => config.getConfig("chiltepin.auto-server-mode")
-      case "full-server-mode" => config.getConfig("chiltepin.full-server-mode")
-    }).withFallback(config.getConfig("chiltepin.bqgateway"))
+    val gatewayConfig = config.getConfig(s"chiltepin.bqgateway.$serverMode").withFallback(config.getConfig("chiltepin.bqgateway"))
 
     // Load the user's config merged with default config
     val workerConfig = config.getConfig("chiltepin.bqworker").withFallback(config.getConfig("chiltepin.bqserver"))

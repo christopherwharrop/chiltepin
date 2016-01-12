@@ -29,7 +29,7 @@ class Transition(h2DB: ActorRef, bqGateway: ActorRef, logger: ActorRef, placeNam
 
   // Submission options
 
-  val options = "-A jetmgmt -l procs=1,partition=njet"
+  val options = "-A nesccmgmt -l procs=1 -l walltime=00:05:00"
 //wcoss  val options = "-P HWRF-T2O -W 00:01 -n 1 -q debug -J chiltepin"
 // yellowstone  val options = "-P P48500053 -W 00:01 -n 1 -q caldera"
 // jet  val options = "-A jetmgmt -l procs=1,partition=njet"
