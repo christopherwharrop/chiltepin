@@ -68,7 +68,7 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
     h2DB ! H2DB.GetReady
 
     // Create bqGateway actor for submitting bq requests
-    context.actorSelection(s"akka.ssl.tcp://BQServer@$bqHost:$bqPort/user/bqGateway") ! Identify(BQGatewayID)
+    context.actorSelection(s"akka.ssl.tcp://BQGateway@$bqHost:$bqPort/user/bqGateway") ! Identify(BQGatewayID)
 
   }
 

@@ -79,12 +79,12 @@ object BQServer extends WhoAmI {
     val systemWorker = ActorSystem("BQWorker", workerConfig)
 
     // Set up back end actor system for batch system services
-    val systemServer = ActorSystem("BQServer", gatewayConfig)
+    val systemGateway = ActorSystem("BQGateway", gatewayConfig)
 
     // Get actor system's hostname and port number
-    val host = ExternalAddress(systemServer).addressForAkka.host.getOrElse("")
-    val port = ExternalAddress(systemServer).addressForAkka.port.getOrElse(0)
-    val address = Seq(AddressFromURIString(s"akka.ssl.tcp://BQServer@$host:$port"))
+    val host = ExternalAddress(systemGateway).addressForAkka.host.getOrElse("")
+    val port = ExternalAddress(systemGateway).addressForAkka.port.getOrElse(0)
+    val address = Seq(AddressFromURIString(s"akka.ssl.tcp://BQGateway@$host:$port"))
 
     // Record actor system's host/port in the services database
     val db = Database.forURL(s"jdbc:h2:${whoami.home}/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
@@ -109,7 +109,7 @@ object BQServer extends WhoAmI {
     val bqSub = systemWorker.actorOf(FromConfig.props(BqSub.props(bqBehavior, logger)), "bqSub")
 
     // Create the bqGateway actor
-    val bqGateway = systemServer.actorOf(BqGateway.props(bqStat, bqSub, logger), "bqGateway")
+    val bqGateway = systemGateway.actorOf(BqGateway.props(bqStat, bqSub, logger), "bqGateway")
 
 
   }

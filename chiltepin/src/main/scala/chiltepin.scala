@@ -43,16 +43,16 @@ object Chiltepin extends RunCommand with WhoAmI {
     val serverMode = config.getString("chiltepin.server-mode")
 
     // Get the workflow config for the selected server mode
-    val workflowConfig = config.getConfig(s"chiltepin.workflow.$serverMode").withFallback(config.getConfig("chiltepin.workflow"))
+    val gatewayConfig = config.getConfig(s"chiltepin.wfGateway.$serverMode").withFallback(config.getConfig("chiltepin.wfGateway")).withFallback(config.getConfig("chiltepin.workflow"))
 
     // Update the user config file to make sure it is up-to-date with the current options
     new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
 
     // Set up actor system
-    val system = ActorSystem("Chiltepin",workflowConfig)
+    val systemGateway = ActorSystem("WFGateway",gatewayConfig)
 
     // Create the Workflow actor
-    val workflow = system.actorOf(Props[Workflow], name = "workflow")
+    val workflow = systemGateway.actorOf(Props[Workflow], name = "workflow")
   
     // Run the workflow
     workflow ! Workflow.Run
