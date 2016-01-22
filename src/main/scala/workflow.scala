@@ -36,11 +36,6 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
   var logger: ActorRef = context.system.deadLetters
   var h2DB: ActorRef = context.system.deadLetters
   var bqGateway: ActorRef = context.system.deadLetters
-  var x: ActorRef = context.system.deadLetters
-  var f_of_x: ActorRef = context.system.deadLetters
-  var g_of_x: ActorRef = context.system.deadLetters
-  var y: ActorRef = context.system.deadLetters
-  var z: ActorRef = context.system.deadLetters
 
   var init: Int = 0
 
@@ -88,30 +83,19 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
     case Run => 
       logger ! Logger.Info("Running workflow",2)
 
-    // Create an input place actor to supply input to a transition
-//    x = context.actorOf(Props(new Place(h2DB,logger,List("f_of_x","g_of_x"))), name = "x")
+      // Create an output place actor to supply output from a transition
+      val y = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "y")
 
-    // Create an output place actor to supply output from a transition
-    y = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "y")
+      // Create a transition actor to run a job on input x
+      val f_of_x = context.actorOf(Props(new Transition(h2DB,bqGateway,logger,List("y"))), name = "f_of_x")
 
-    // Create a transition actor to run a job on input x
-    f_of_x = context.actorOf(Props(new Transition(h2DB,bqGateway,logger,List("y"))), name = "f_of_x")
+      f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
+// jet, theia   f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
+// yellowstone  f_of_x ! Transition.Run("/glade/u/home/harrop/test/test.sh")
+// wcoss        f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")
 
-    // Create a transition actor to run a job on input x
-//    g_of_x = context.actorOf(Props(new Transition(h2DB,bqGateway,logger,List("z"))), name = "g_of_x")
-
-
-    // Create an output place actor to supply output from a transition
-//    z = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "z")
-
-
-
-    f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
-// jet, theia     f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
-// yellowstone      f_of_x ! Transition.Run("/glade/u/home/harrop/test/test.sh")
-// wcoss    f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")
     case Terminated(deadActor) =>
-      println(deadActor.path.name + " has died")
+      logger ! Logger.Info(deadActor.path.name + " has died",2)
     case Done => 
       context.system.shutdown()
   }
