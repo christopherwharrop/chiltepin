@@ -1,3 +1,4 @@
+import scala.collection.mutable.Map
 import akka.actor._
 import akka.routing.RoundRobinPool
 
@@ -5,6 +6,7 @@ import scala.slick.driver.H2Driver.simple._
 import scala.slick.jdbc.meta.MTable
 import H2DB._
 
+import ChiltepinImplicits._
 
 object Workflow {
   case object GetReady
@@ -19,6 +21,7 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
   import Workflow._
   implicit val ec = context.dispatcher
+  implicit val myContext = context
 
   // Get owner of this process
   val whoami = whoAmI()
@@ -82,10 +85,13 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
       val y = context.actorOf(Props(new Place(List[String]())), name = "y")
 
       // Create a transition actor to run a job on input x
-      val f_of_x = context.actorOf(Props(new Transition(List("y"))), name = "f_of_x")
+//      val f_of_x = context.actorOf(Props(new Transition(List("y"))), name = "f_of_x")
 
       // Tell the transition to fire
-      f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
+//      f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
+
+      "test" runs "/home/Christopher.W.Harrop/test/test.sh" usingOptions "-A nesccmgmt -l procs=1 -l walltime=00:05:00" withEnvironment Map("HOME" -> "/blah/blah/home")
+
 // jet, theia   f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
 // yellowstone  f_of_x ! Transition.Run("/glade/u/home/harrop/test/test.sh")
 // wcoss        f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")

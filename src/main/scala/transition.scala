@@ -7,7 +7,10 @@ import akka.pattern.pipe
 
 object Transition {
   case object GetReady
-  case class Run(cmd: String)
+  case class SetCommand(cmd: String)
+  case class SetOptions(opt: String)
+  case class SetEnvironment(env: Map[String,String])
+  case object Run
   case class SubmitFailed(error: Option[BQError])
   case class SubmitSucceeded(jobid: String)
   case class StateUpdate(job: BQJob)
@@ -29,7 +32,11 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
 
   // Submission options
 
-  val options = "-A nesccmgmt -l procs=1 -l walltime=00:05:00"
+//  val options = "-A nesccmgmt -l procs=1 -l walltime=00:05:00"
+  var options = ""
+  var command = ""
+  var environment = Map[String,String]()
+
 //wcoss  val options = "-P HWRF-T2O -W 00:01 -n 1 -q debug -J chiltepin"
 // yellowstone  val options = "-P P48500053 -W 00:01 -n 1 -q caldera"
 // jet  val options = "-A jetmgmt -l procs=1,partition=njet"
@@ -85,9 +92,12 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
   // All our places have been acquired
   def initialized : Receive = {
 
-    case Run(cmd) => 
+    case SetCommand(cmd: String) => command = cmd
+    case SetOptions(opt :String) => options = opt
+    case SetEnvironment(env : Map[String,String]) => environment = env
+    case Run => 
       logger.actor ! Logger.Info("Asking bqsub to submit the job",2)
-      bqGateway.actor ! BqGateway.Submit(cmd, options)
+      bqGateway.actor ! BqGateway.Submit(command, options)
     case SubmitFailed(bqError) => 
       bqError match {
         case Some(error) => logger.actor ! Logger.Info(s"ERROR: Could not submit job.  ${error.message}",2)
