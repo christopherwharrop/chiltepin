@@ -2,6 +2,9 @@ import akka.actor._
 import scala.concurrent.Future
 import akka.pattern.pipe
 
+
+case class BQGatewayWrapper(actor: ActorRef)
+
 ///////////////////////////////////////////////////
 //
 // BqGateway Companion Object

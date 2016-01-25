@@ -13,7 +13,7 @@ object Transition {
   case class StateUpdate(job: BQJob)
 }
 
-class Transition(h2DB: ActorRef, bqGateway: ActorRef, logger: ActorRef, placeNames: List[String]) extends Actor with Stash {
+class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) extends Actor with Stash {
 
   import Transition._
   implicit val ec = context.dispatcher
@@ -59,14 +59,14 @@ class Transition(h2DB: ActorRef, bqGateway: ActorRef, logger: ActorRef, placeNam
   def waitingForPlaces: Receive = {
     case PlaceAcquired(placeName, placeActor) =>
 
-      logger ! Logger.Info(s"Collected reference for place $placeName",3)
+      logger.actor ! Logger.Info(s"Collected reference for place $placeName",3)
 
       // Collect the place actor reference
       placeActors(placeName) = placeActor
 
       if (placeActors.size == placeNames.size) {
 
-        logger ! Logger.Info(s"Collected references for all places",3)
+        logger.actor ! Logger.Info(s"Collected references for all places",3)
 
         // Get all the messages we stashed and receive them
         unstashAll()
@@ -86,30 +86,30 @@ class Transition(h2DB: ActorRef, bqGateway: ActorRef, logger: ActorRef, placeNam
   def initialized : Receive = {
 
     case Run(cmd) => 
-      logger ! Logger.Info("Asking bqsub to submit the job",2)
-      bqGateway ! BqGateway.Submit(cmd, options)
+      logger.actor ! Logger.Info("Asking bqsub to submit the job",2)
+      bqGateway.actor ! BqGateway.Submit(cmd, options)
     case SubmitFailed(bqError) => 
       bqError match {
-        case Some(error) => logger ! Logger.Info(s"ERROR: Could not submit job.  ${error.message}",2)
-        case None => logger ! Logger.Info(s"ERROR: Could not submit job.  Reason unknown",2)
+        case Some(error) => logger.actor ! Logger.Info(s"ERROR: Could not submit job.  ${error.message}",2)
+        case None => logger.actor ! Logger.Info(s"ERROR: Could not submit job.  Reason unknown",2)
       }
     case SubmitSucceeded(jobid) => 
-      h2DB ! H2DB.AddJob(jobid,"Submitted")
-      logger ! Logger.Info(s"Submitted job $jobid",2)
-      logger ! Logger.Info("Subscribing to job events",2)
-      bqGateway ! BqGateway.WatchJob(self,jobid)
+      h2DB.actor ! H2DB.AddJob(jobid,"Submitted")
+      logger.actor ! Logger.Info(s"Submitted job $jobid",2)
+      logger.actor ! Logger.Info("Subscribing to job events",2)
+      bqGateway.actor ! BqGateway.WatchJob(self,jobid)
       statusRequest = context.system.scheduler.schedule(updateInterval.seconds,
                                                   updateInterval.seconds,
-                                                  bqGateway,
+                                                  bqGateway.actor,
                                                   BqGateway.StatusRequest(jobid))
 
     case StateUpdate(job) => 
-      h2DB ! H2DB.UpdateJob(job.jobId,job.state)      
-      logger ! Logger.Info(s"job ${job.jobId} is in state ${job.state}(${job.nativeState})",2)
+      h2DB.actor ! H2DB.UpdateJob(job.jobId,job.state)      
+      logger.actor ! Logger.Info(s"job ${job.jobId} is in state ${job.state}(${job.nativeState})",2)
       if (job.state == "Complete") {
         statusRequest.cancel()
-        logger ! Logger.Info(s"Unsubscribing from job ${job.jobId}",2)
-        bqGateway ! BqGateway.UnwatchJob(self,job.jobId)
+        logger.actor ! Logger.Info(s"Unsubscribing from job ${job.jobId}",2)
+        bqGateway.actor ! BqGateway.UnwatchJob(self,job.jobId)
         context.system.shutdown()
       }
 

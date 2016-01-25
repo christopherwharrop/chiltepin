@@ -33,9 +33,9 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
   val db = Database.forURL(s"jdbc:h2:${whoami.home}/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
 
   // Initialize children
-  var logger: ActorRef = context.system.deadLetters
-  var h2DB: ActorRef = context.system.deadLetters
-  var bqGateway: ActorRef = context.system.deadLetters
+  implicit val logger = LoggerWrapper(context.actorOf(Props[Logger], name = "logger"))
+  implicit val h2DB = H2DBWrapper(context.actorOf(H2DB.props, name = "h2DB"))
+  implicit var bqGateway = BQGatewayWrapper(context.system.deadLetters)
 
   var init: Int = 0
 
@@ -55,12 +55,7 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
       bqPort = result._2
     }
 
-    // Create a logger actor for logging workflow events
-    logger = context.actorOf(Props[Logger], name = "logger")
-
-    // Create h2DB actor for handling database queries and updates
-    h2DB = context.actorOf(Props(new H2DB(logger)), name = "h2DB")
-    h2DB ! H2DB.GetReady
+    h2DB.actor ! H2DB.GetReady
 
     // Create bqGateway actor for submitting bq requests
     context.actorSelection(s"akka.ssl.tcp://BQGateway@$bqHost:$bqPort/user/bqGateway") ! Identify(BQGatewayID)
@@ -71,7 +66,7 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
   def uninitialized: Receive = {
 
     case ActorIdentity(BQGatewayID, Some(ref)) =>
-      bqGateway = ref
+      bqGateway = BQGatewayWrapper(ref)
       unstashAll()
       context.become(initialized)
     case ActorIdentity(BQGatewayID, None) => println("Didn't find bqGateway")
@@ -81,21 +76,22 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
   def initialized: Receive = {
     case Run => 
-      logger ! Logger.Info("Running workflow",2)
+      logger.actor ! Logger.Info("Running workflow",2)
 
       // Create an output place actor to supply output from a transition
-      val y = context.actorOf(Props(new Place(h2DB,logger,List[String]())), name = "y")
+      val y = context.actorOf(Props(new Place(List[String]())), name = "y")
 
       // Create a transition actor to run a job on input x
-      val f_of_x = context.actorOf(Props(new Transition(h2DB,bqGateway,logger,List("y"))), name = "f_of_x")
+      val f_of_x = context.actorOf(Props(new Transition(List("y"))), name = "f_of_x")
 
+      // Tell the transition to fire
       f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
 // jet, theia   f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
 // yellowstone  f_of_x ! Transition.Run("/glade/u/home/harrop/test/test.sh")
 // wcoss        f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")
 
     case Terminated(deadActor) =>
-      logger ! Logger.Info(deadActor.path.name + " has died",2)
+      logger.actor ! Logger.Info(deadActor.path.name + " has died",2)
     case Done => 
       context.system.shutdown()
   }

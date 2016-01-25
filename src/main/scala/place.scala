@@ -10,7 +10,7 @@ object Place {
   case object GetReady
 }
 
-class Place(h2DB: ActorRef, logger: ActorRef, transitionNames: List[String]) extends Actor with Stash {
+class Place(transitionNames: List[String])(implicit logger: LoggerWrapper) extends Actor with Stash {
 
   import Place._
   implicit val ec = context.dispatcher
@@ -42,14 +42,14 @@ class Place(h2DB: ActorRef, logger: ActorRef, transitionNames: List[String]) ext
   def waitingForTransitions: Receive = {
     case TransitionAcquired(transitionName, transitionActor) =>
 
-      logger ! Logger.Info(s"Collected reference for transition $transitionName",3)
+      logger.actor ! Logger.Info(s"Collected reference for transition $transitionName",3)
 
       // Collect the transition actor reference
       transitionActors(transitionName) = transitionActor
 
       if (transitionActors.size == transitionNames.size) {
 
-        logger ! Logger.Info(s"Collected references for all transitions",3)
+        logger.actor ! Logger.Info(s"Collected references for all transitions",3)
 
         // Get all the messages we stashed and receive them
         unstashAll()

@@ -2,6 +2,8 @@ import akka.actor._
 import org.joda.time._
 import org.joda.time.format._
 
+case class LoggerWrapper(actor: ActorRef)
+
 object Logger {
 
   case object GetReady
@@ -10,8 +12,6 @@ object Logger {
   case class  Error(msg: String)
   case object Stop
 }
-
-
 
 class Logger extends Actor {
 

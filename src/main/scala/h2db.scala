@@ -5,14 +5,21 @@ import scala.util.{Failure, Success}
 import scala.slick.driver.H2Driver.simple._
 import scala.slick.jdbc.meta.MTable
 
+case class H2DBWrapper(actor: ActorRef)
+
 object H2DB {
+
+  // Provide a Props for actor creation
+  def props(implicit logger: LoggerWrapper): Props = { Props(new H2DB) }
+
   case object GetReady
   case class AddJob(id: String, state: String)
   case class UpdateJob(id: String, state: String)
   case object GetJobs
+
 }
 
-class H2DB(logger: ActorRef) extends Actor {
+class H2DB(implicit logger: LoggerWrapper) extends Actor {
 
   import H2DB._
   implicit val ec = context.dispatcher
@@ -48,7 +55,7 @@ class H2DB(logger: ActorRef) extends Actor {
       db.withSession {
         implicit session =>
         jobs foreach { case (id, state) =>
-           logger ! Logger.Info(s"Database shows job $id in state $state",2)
+           logger.actor ! Logger.Info(s"Database shows job $id in state $state",2)
          }       
       }
     case UpdateJob(id,newstate) =>
