@@ -79,6 +79,21 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
   def initialized: Receive = {
     case Run => 
+
+      // Set the options to use 
+      val wcossOpt =       "-P HWRF-T2O -W 00:01 -n 1 -q debug -J chiltepin"
+      val yellowstoneOpt = "-P P48500053 -W 00:01 -n 1 -q caldera -J chiltepin"
+      val jetOpt =         "-A jetmgmt -l procs=1,partition=njet,walltime=00:05:00 -N chiltepin"
+      val theiaOpt =       "-A nesccmgmt -l procs=1,walltime=00:05:00"
+      val options = theiaOpt
+
+      // Set the command to use
+      val wcossCmd = "/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh"
+      val yellowstoneCmd = "/glade/u/home/harrop/test/test.sh"
+      val jetCmd = "/home/Christopher.W.Harrop/test/test.sh"
+      val theiaCmd = "/home/Christopher.W.Harrop/test/test.sh"
+      val command = theiaCmd
+
       logger.actor ! Logger.Info("Running workflow",2)
 
       // Create an output place actor to supply output from a transition
@@ -87,14 +102,7 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
       // Create a transition actor to run a job on input x
 //      val f_of_x = context.actorOf(Props(new Transition(List("y"))), name = "f_of_x")
 
-      // Tell the transition to fire
-//      f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
-
-      "test" runs "/home/Christopher.W.Harrop/test/test.sh" usingOptions "-A nesccmgmt -l procs=1 -l walltime=00:05:00" withEnvironment Map("HOME" -> "/blah/blah/home")
-
-// jet, theia   f_of_x ! Transition.Run("/home/Christopher.W.Harrop/test/test.sh")
-// yellowstone  f_of_x ! Transition.Run("/glade/u/home/harrop/test/test.sh")
-// wcoss        f_of_x ! Transition.Run("/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh")
+      "test" runs command usingOptions options withEnvironment Map("BLAH" -> "/blah/blah/blah")
 
     case Terminated(deadActor) =>
       logger.actor ! Logger.Info(deadActor.path.name + " has died",2)
