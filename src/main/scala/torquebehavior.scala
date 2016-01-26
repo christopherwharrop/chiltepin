@@ -20,13 +20,16 @@ class TorqueBehavior extends BQBehavior {
   // submit
   //
   ///////////////////////////////////////////////////
-  def submit(command: String, options: String): BQSubmitResult = {
+  def submit(command: String, options: String, environment: Map[String,String]): BQSubmitResult = {
 
     // Pattern for extracting jobid from the output of qsub
     val jobRegEx = """(?s)(?m).*^((\d+)(?:\.[a-zA-Z0-9-]+)*)$.*""".r
 
+    // Compute the environment options
+    val envOption = "-v " + environment.map { e => e._1 + "=" + "'" + e._2 + "'"}.mkString(",")
+
     // Run qsub
-    val qsub = runCommand(s"qsub $options $command")
+    val qsub = runCommand(s"qsub $options $envOption $command")
 
     // Look for jobid in output and extract it or report an error
     qsub.stdout match {

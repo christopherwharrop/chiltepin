@@ -20,7 +20,7 @@ class MoabBehavior extends BQBehavior {
   // submit
   //
   ///////////////////////////////////////////////////
-  def submit(command: String, options: String): BQSubmitResult = {
+  def submit(command: String, options: String, environment: Map[String,String]): BQSubmitResult = {
 
     // Pattern for extracting jobid from the output of msub
     val jobRegEx = """(?s)(?m).*^((?:[a-zA-Z0-9-]+\.)*(\d+))$.*""".r

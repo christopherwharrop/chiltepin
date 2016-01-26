@@ -16,7 +16,7 @@ object BqGateway {
   def props(bqStat: ActorRef, bqSub: ActorRef, logger: ActorRef): Props = Props(new BqGateway(bqStat,bqSub,logger))
 
   // BqGateway messages
-  case class Submit(script: String, options: String)
+  case class Submit(script: String, options: String, environment: Map[String,String])
   case class WatchJob(requestor: ActorRef,jobId: String)
   case class StatusRequest(jobId: String)
   case class UnwatchJob(requestor: ActorRef,jobId: String)
@@ -42,7 +42,7 @@ class BqGateway(bqStat: ActorRef, bqSub: ActorRef, logger: ActorRef) extends Act
   //
   ///////////////////////////////////////////////////
   def receive = {
-      case BqGateway.Submit(script,options) => bqSub forward BqSub.Submit(script,options)
+      case BqGateway.Submit(script,options,environment) => bqSub forward BqSub.Submit(script,options,environment)
       case BqGateway.WatchJob(subscriber,jobid) => bqStat forward BqStat.WatchJob(subscriber,jobid)
       case BqGateway.StatusRequest(jobId) => bqStat forward BqStat.StatusRequest(jobId)
       case BqGateway.UnwatchJob(subscriber,jobid) => bqStat forward BqStat.UnwatchJob(subscriber,jobid)

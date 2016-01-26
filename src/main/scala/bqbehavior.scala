@@ -10,7 +10,7 @@ case class BQStatusResult(jobMap: Option[Map[String,BQJob]], error: Option[BQErr
 ///////////////////////////////////////////////////
 abstract class BQBehavior extends RunCommand {
 
-  def submit(command: String, options: String): BQSubmitResult
+  def submit(command: String, options: String, environment: Map[String,String]): BQSubmitResult
   def status(jobIds: List[String]): BQStatusResult
 
 }

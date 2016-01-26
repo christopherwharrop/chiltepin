@@ -1,4 +1,3 @@
-import scala.collection.mutable.Map
 import akka.actor._
 import scala.concurrent.Future
 import akka.util.Timeout
@@ -90,7 +89,7 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
     case SetEnvironment(env : Map[String,String]) => environment = env
     case Run => 
       logger.actor ! Logger.Info("Asking bqsub to submit the job",2)
-      bqGateway.actor ! BqGateway.Submit(command, options)
+      bqGateway.actor ! BqGateway.Submit(command, options, environment)
     case SubmitFailed(bqError) => 
       bqError match {
         case Some(error) => logger.actor ! Logger.Info(s"ERROR: Could not submit job.  ${error.message}",2)

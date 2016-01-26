@@ -17,7 +17,7 @@ class LSFBehavior extends BQBehavior {
   // submit
   //
   ///////////////////////////////////////////////////
-  def submit(command: String, options: String): BQSubmitResult = {
+  def submit(command: String, options: String, environment: Map[String,String]): BQSubmitResult = {
 
     // Pattern for extracting jobid from the output of qsub
     val jobRegEx = """(?s)(?m).*^Job <(\d+)> is submitted to .*queue.*$.*""".r

@@ -13,7 +13,7 @@ object BqSub {
   def props(bqBehavior: BQBehavior, logger: ActorRef): Props = Props(new BqSub(bqBehavior,logger))
 
   // BqSub messages
-  case class Submit(script: String, options: String) extends PossiblyHarmful
+  case class Submit(script: String, options: String, environment: Map[String,String]) extends PossiblyHarmful
   case class SubmitResult(requestor: ActorRef, result: BQSubmitResult)
 
 }
@@ -35,9 +35,9 @@ class BqSub(bqBehavior: BQBehavior, logger: ActorRef) extends Actor with RunComm
   //
   ///////////////////////////////////////////////////
   def receive = {
-    case Submit(script,options) =>
+    case Submit(script,options,environment) =>
       val requestor = sender
-      val qsub = Future(bqBehavior.submit(script,options)) map { result => SubmitResult(requestor, result) } pipeTo self
+      val qsub = Future(bqBehavior.submit(script,options,environment)) map { result => SubmitResult(requestor, result) } pipeTo self
     case SubmitResult(requestor, result) =>
       result.jobId match {
         case Some(jobId) => requestor ! Transition.SubmitSucceeded(jobId)

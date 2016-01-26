@@ -13,10 +13,10 @@ class MoabTorqueBehavior extends BQBehavior {
   // submit
   //
   ///////////////////////////////////////////////////
-  def submit(command: String, options: String): BQSubmitResult = {
+  def submit(command: String, options: String, environment: Map[String,String]): BQSubmitResult = {
 
     // Submit the job with Torque
-    torqueBehavior.submit(command, options)
+    torqueBehavior.submit(command, options, environment)
 
   }
 

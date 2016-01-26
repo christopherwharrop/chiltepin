@@ -1,4 +1,3 @@
-import scala.collection.mutable.Map
 import scala.language.implicitConversions
 import akka.actor._
 

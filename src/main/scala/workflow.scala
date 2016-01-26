@@ -1,4 +1,3 @@
-import scala.collection.mutable.Map
 import akka.actor._
 import akka.routing.RoundRobinPool
 
@@ -85,14 +84,14 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
       val yellowstoneOpt = "-P P48500053 -W 00:01 -n 1 -q caldera -J chiltepin"
       val jetOpt =         "-A jetmgmt -l procs=1,partition=njet,walltime=00:05:00 -N chiltepin"
       val theiaOpt =       "-A nesccmgmt -l procs=1,walltime=00:05:00"
-      val options = theiaOpt
+      val options = jetOpt
 
       // Set the command to use
       val wcossCmd = "/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh"
       val yellowstoneCmd = "/glade/u/home/harrop/test/test.sh"
       val jetCmd = "/home/Christopher.W.Harrop/test/test.sh"
       val theiaCmd = "/home/Christopher.W.Harrop/test/test.sh"
-      val command = theiaCmd
+      val command = jetCmd
 
       logger.actor ! Logger.Info("Running workflow",2)
 
@@ -102,7 +101,8 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
       // Create a transition actor to run a job on input x
 //      val f_of_x = context.actorOf(Props(new Transition(List("y"))), name = "f_of_x")
 
-      "test" runs command usingOptions options withEnvironment Map("BLAH" -> "/blah/blah/blah")
+      "test1" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo1")
+      "test2" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo2")
 
     case Terminated(deadActor) =>
       logger.actor ! Logger.Info(deadActor.path.name + " has died",2)
