@@ -15,7 +15,7 @@ object Transition {
   case class StateUpdate(job: BQJob)
 }
 
-class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) extends Actor with Stash {
+class Transition()(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) extends Actor with Stash {
 
   import Transition._
   implicit val ec = context.dispatcher
@@ -24,7 +24,7 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
   implicit val timeout = Timeout(1.second)
 
 
-  val updateInterval =context.system.settings.config.getInt("update-interval")
+  val updateInterval = context.system.settings.config.getInt("update-interval")
 
   // A map of place names to place actor references
   val placeActors = collection.mutable.Map[String, ActorRef]()
@@ -42,7 +42,7 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
   case class PlaceNotAcquired(t: Throwable) extends PlaceAcquisition
 
   // Send either PlacesAcquired or PlacesNotAcquired message to self for each place dependency
-  placeNames foreach { acquirePlace(_) pipeTo self }
+//  placeNames foreach { acquirePlace(_) pipeTo self }
 
   def acquirePlace(placeName: String): Future[PlaceAcquisition] = {
     context.actorSelection("../" + placeName).resolveOne() map {
@@ -53,33 +53,41 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
   }
 
 
-  def receive: Receive = waitingForPlaces
+  override def preStart() {
 
-  def waitingForPlaces: Receive = {
-    case PlaceAcquired(placeName, placeActor) =>
+    // Create the status output place
+    placeActors("status") =  context.actorOf(Props(new Place), name = "status")
 
-      logger.actor ! Logger.Info(s"Collected reference for place $placeName",3)
-
-      // Collect the place actor reference
-      placeActors(placeName) = placeActor
-
-      if (placeActors.size == placeNames.size) {
-
-        logger.actor ! Logger.Info(s"Collected references for all places",3)
-
-        // Get all the messages we stashed and receive them
-        unstashAll()
-
-        // pass all our acquired dependencies in
-        context.become(initialized)
-
-      }
-
-    case PlaceNotAcquired(t) => throw new IllegalStateException(s"Failed to acquire place: $t")
-
-    // Any other message save for later
-    case _ => stash()
   }
+
+//  def receive: Receive = waitingForPlaces
+  def receive: Receive = initialized
+
+//  def waitingForPlaces: Receive = {
+//    case PlaceAcquired(placeName, placeActor) =>
+//
+//      logger.actor ! Logger.Info(s"Collected reference for place $placeName",3)
+//
+//      // Collect the place actor reference
+//      placeActors(placeName) = placeActor
+//
+//      if (placeActors.size == placeNames.size) {
+//
+//        logger.actor ! Logger.Info(s"Collected references for all places",3)
+//
+//        // Get all the messages we stashed and receive them
+//        unstashAll()
+//
+//        // pass all our acquired dependencies in
+//        context.become(initialized)
+//
+//      }
+//
+//    case PlaceNotAcquired(t) => throw new IllegalStateException(s"Failed to acquire place: $t")
+//
+//    // Any other message save for later
+//    case _ => stash()
+//  }
 
   // All our places have been acquired
   def initialized : Receive = {
@@ -104,7 +112,6 @@ class Transition(placeNames: List[String])(implicit logger: LoggerWrapper, h2DB:
                                                   updateInterval.seconds,
                                                   bqGateway.actor,
                                                   BqGateway.StatusRequest(jobid))
-
     case StateUpdate(job) => 
       h2DB.actor ! H2DB.UpdateJob(job.jobId,job.state)      
       logger.actor ! Logger.Info(s"job ${job.jobId} is in state ${job.state}(${job.nativeState})",2)

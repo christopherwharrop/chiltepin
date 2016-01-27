@@ -95,12 +95,6 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
       logger.actor ! Logger.Info("Running workflow",2)
 
-      // Create an output place actor to supply output from a transition
-      val y = context.actorOf(Props(new Place(List[String]())), name = "y")
-
-      // Create a transition actor to run a job on input x
-//      val f_of_x = context.actorOf(Props(new Transition(List("y"))), name = "f_of_x")
-
       "test1" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo1")
       "test2" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo2")
 

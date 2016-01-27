@@ -22,6 +22,6 @@ object ChiltepinImplicits {
     }      
 
   }
-  implicit def String2TransitionHelper(transition: String)(implicit context: ActorContext, logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) = new TransitionHelper(context.actorOf(Props(new Transition(List("y"))), name = transition))
+  implicit def String2TransitionHelper(transition: String)(implicit context: ActorContext, logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) = new TransitionHelper(context.actorOf(Props(new Transition), name = transition))
 
 }
