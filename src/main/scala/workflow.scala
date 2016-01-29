@@ -41,6 +41,13 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
 
   var init: Int = 0
 
+  // Start the workflow
+  def go(): Unit = {
+    context.actorSelection("/user/workflow/*") ! Transition.Go
+  }
+
+  
+
   // Create children before actor starts
   override def preStart() {
   
@@ -93,10 +100,10 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
       val theiaCmd = "/home/Christopher.W.Harrop/test/test.sh"
       val command = jetCmd
 
-      logger.actor ! Logger.Info("Running workflow",2)
-
       "test1" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo1")
-      "test2" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo2")
+      "test2" usingOptions options runs command withEnvironment Map("FOO" -> "/blah/blah/foo2") dependsOn "test1"
+
+      go
 
     case Terminated(deadActor) =>
       logger.actor ! Logger.Info(deadActor.path.name + " has died",2)

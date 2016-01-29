@@ -7,6 +7,8 @@ import akka.pattern.pipe
 
 
 object Place {
+  case class AddTransition(transition: ActorRef)
+  case object Token
   case object GetReady
 }
 
@@ -36,6 +38,10 @@ class Place()(implicit logger: LoggerWrapper) extends Actor with Stash {
 //      case t:Throwable => TransitionNotAcquired(t)
 //    }
 //  }
+
+
+logger.actor ! Logger.Info(s"Place ${akka.serialization.Serialization.serializedActorPath(self)} has been created",2)
+
 
 //  def receive: Receive = waitingForTransitions
   def receive: Receive = initialized
@@ -69,6 +75,10 @@ class Place()(implicit logger: LoggerWrapper) extends Actor with Stash {
   // All our transitions have been acquired
   def initialized : Receive = {
 
+    case AddTransition(transition) => 
+      logger.actor ! Logger.Info(s"Place ${self.path.name} adding transition ${transition.path.name}",2)
+      transitionActors(transition.path.name) = transition
+    case Token => transitionActors.values foreach { _ ! Transition.Run }
     case GetReady => println("ready")
 
   }
