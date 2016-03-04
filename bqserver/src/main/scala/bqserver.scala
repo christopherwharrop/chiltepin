@@ -1,3 +1,7 @@
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 import akka.actor._
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
@@ -5,8 +9,11 @@ import java.io.File
 import java.io.PrintWriter
 import akka.routing.FromConfig
 import akka.actor.{ Address, AddressFromURIString }
-import scala.slick.driver.H2Driver.simple._
-import scala.slick.jdbc.meta.MTable
+
+import slick.driver.H2Driver.api._
+import slick.lifted.Tag
+import slick.jdbc.meta.MTable
+
 
 // Extension needed to get full remote actor path
 object ExternalAddress extends ExtensionKey[ExternalAddressExt]
@@ -88,15 +95,26 @@ object BQServer extends WhoAmI {
 
     // Record actor system's host/port in the services database
     val db = Database.forURL(s"jdbc:h2:${whoami.home}/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
-    db.withSession {
-      implicit session =>
-      if (MTable.getTables("BQSERVER").list().isEmpty) {
-        bqServer.ddl.create
-        bqServer += (host, port)
-      } else {
-        val q = for { c <- bqServer } yield (c.host,c.port)
-        q.update(host, port)
-      }
+//    db.withSession {
+//      implicit session =>
+//      if (MTable.getTables("BQSERVER").list().isEmpty) {
+//        bqServer.ddl.create
+//        bqServer += (host, port)
+//      } else {
+//        val q = for { c <- bqServer } yield (c.host,c.port)
+//        q.update(host, port)
+//      }
+//    }
+    
+    if (Await.result(db.run(MTable.getTables("BQSERVER")), 1.seconds).isEmpty) {
+      val setupAction : DBIO[Unit] = DBIO.seq(bqServer.schema.create, bqServer ++= Seq((host, port)))
+      val setupFuture : Future[Unit] = db.run(setupAction)
+      Await.result(setupFuture,1.seconds)
+    } else {
+      val oldEntry = for { bqs <- bqServer} yield (bqs.host, bqs.port)
+      val updateAction = oldEntry.update(host, port)
+      val updateFuture = db.run(updateAction)
+      Await.result(updateFuture, 1.seconds)
     }
 
     // Create the logging actor

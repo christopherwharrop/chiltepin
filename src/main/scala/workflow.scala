@@ -1,8 +1,13 @@
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import akka.actor._
 import akka.routing.RoundRobinPool
 
-import scala.slick.driver.H2Driver.simple._
-import scala.slick.jdbc.meta.MTable
+import slick.driver.H2Driver.api._
+import slick.lifted.Tag
+import slick.jdbc.meta.MTable
+
 import H2DB._
 
 import ChiltepinImplicits._
@@ -54,15 +59,29 @@ class Workflow extends Actor with Stash with RunCommand with WhoAmI {
     // Retrieve the host/port of the bqServer actors from the services database
     var bqHost = ""
     var bqPort = 0
-    db.withSession {
-      implicit session =>
-      if (MTable.getTables("BQSERVER").list().isEmpty) {
-        bqServer.ddl.create
+//    db.withSession {
+//      implicit session =>
+//      if (MTable.getTables("BQSERVER").list().isEmpty) {
+//        bqServer.ddl.create
+//      }
+//      val result = bqServer.take(1).firstOption.getOrElse(("",0))
+
+      if (Await.result(db.run(MTable.getTables("BQSERVER")), 1.seconds).isEmpty) {
+        val setupAction : DBIO[Unit] = DBIO.seq(bqServer.schema.create)
+        val setupFuture : Future[Unit] = db.run(setupAction)
+        Await.result(setupFuture,1.seconds)
       }
-      val result = bqServer.take(1).firstOption.getOrElse(("",0))
+//      val result = bqServer.take(1).head.getOrElse(("",0))
+//      val result = for { bqs <- bqServer } yield bqs.head
+
+
+      val queryAction = bqServer.result.headOption
+      val queryFuture = db.run(queryAction)
+      val result = Await.result(queryFuture, 1.seconds).getOrElse(("",0))
+      
       bqHost = result._1
       bqPort = result._2
-    }
+//    }
 
     h2DB.actor ! H2DB.GetReady
 
