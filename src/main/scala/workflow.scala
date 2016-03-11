@@ -1,137 +1,76 @@
-import scala.concurrent.Await
-import scala.concurrent.Future
-import scala.concurrent.duration._
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
 import akka.actor._
-import akka.routing.RoundRobinPool
 
-import slick.driver.H2Driver.api._
-import slick.lifted.Tag
-import slick.jdbc.meta.MTable
+//import java.io.File
+import java.io.PrintWriter
 
-import H2DB._
+import Task._
 
-import ChiltepinImplicits._
+object Workflow extends RunCommand with WhoAmI {
 
-object Workflow {
-  case object GetReady
-  case object H2DBReady
-  case object TransitionReady
-  case object Run
-  case object Done
-  val BQGatewayID = "bqGateway"
+  var realtime = false
+  var tasks = scala.collection.mutable.Map[String,Task]()
+
+  def run():Unit = {
+
+    // Get owner of this process
+    val whoami = whoAmI()
+
+    // Compute the user's chiltepin directory
+    val chiltepinDir = whoami.home + "/.chiltepin"
+
+    // Create chiltepin var dir
+    val varDir = new java.io.File(chiltepinDir + "/var")
+    if (! varDir.exists) varDir.mkdirs
+
+    // Create chiltepin etc dir
+    val etcDir = new java.io.File(chiltepinDir + "/etc")
+    if (! etcDir.exists) etcDir.mkdirs
+
+    // Compute the name of the user config file
+    val chiltepinConfigFile = new java.io.File(chiltepinDir + "/etc/chiltepin.conf")
+
+    // Get default configuration for the chiltepin
+    val defaultConfig = ConfigFactory.load()
+
+    // Get the current user config
+    val config = if (chiltepinConfigFile.exists) {
+      ConfigFactory.parseFile(chiltepinConfigFile).withFallback(defaultConfig)
+    }
+    else {
+      defaultConfig
+    }
+
+    // Get the server mode
+    val serverMode = config.getString("chiltepin.server-mode")
+
+    // Get the workflow config for the selected server mode
+    val gatewayConfig = config.getConfig(s"chiltepin.wfGateway.$serverMode").withFallback(config.getConfig("chiltepin.wfGateway")).withFallback(config.getConfig("chiltepin.workflow"))
+
+    // Update the user config file to make sure it is up-to-date with the current options
+    new PrintWriter(chiltepinDir + "/etc/chiltepin.conf") { write("chiltepin " + config.getConfig("chiltepin").root.render(ConfigRenderOptions.defaults().setOriginComments(false))); close }
+
+    // Set up actor system
+    val systemGateway = ActorSystem("WFGateway",gatewayConfig)
+
+    // Create the Workflow Gateway actor
+    val wfGateway = systemGateway.actorOf(Props[WFGateway], name = "wfGateway")
+  
+    // Run the workflow
+//    wfGateway ! WFGateway.Run
+
+
+  }
+
+  def inspect():Unit = {
+    println(s"realtime = $realtime")
+    for ((name, task) <- tasks) {
+      println (s"$name.cmd = ${task.cmd}")
+      println (s"$name.opt = ${task.opt}")
+      println (s"$name.env = ${task.env}")
+    }
+  }
+
 }
 
-class Workflow extends Actor with Stash with RunCommand with WhoAmI {
-
-  import Workflow._
-  implicit val ec = context.dispatcher
-  implicit val myContext = context
-
-  // Get owner of this process
-  val whoami = whoAmI()
-
-  class BQServer(tag: Tag) extends Table[(String, Int)](tag, "BQSERVER") {
-    def host = column[String]("HOST", O.PrimaryKey) // This is the primary key column
-    def port = column[Int]("PORT")
-    def * = (host, port)
-  }
-  val bqServer = TableQuery[BQServer]
-
-  val db = Database.forURL(s"jdbc:h2:${whoami.home}/.chiltepin/var/services;AUTO_SERVER=TRUE", driver = "org.h2.Driver")
-
-  // Initialize children
-  implicit val logger = LoggerWrapper(context.actorOf(Props[Logger], name = "logger"))
-  implicit val h2DB = H2DBWrapper(context.actorOf(H2DB.props, name = "h2DB"))
-  implicit var bqGateway = BQGatewayWrapper(context.system.deadLetters)
-
-  var init: Int = 0
-
-  // Start the workflow
-  def go(): Unit = {
-    context.actorSelection("/user/workflow/*") ! Transition.Go
-  }
-
-  
-
-  // Create children before actor starts
-  override def preStart() {
-  
-    // Retrieve the host/port of the bqServer actors from the services database
-    var bqHost = ""
-    var bqPort = 0
-//    db.withSession {
-//      implicit session =>
-//      if (MTable.getTables("BQSERVER").list().isEmpty) {
-//        bqServer.ddl.create
-//      }
-//      val result = bqServer.take(1).firstOption.getOrElse(("",0))
-
-      if (Await.result(db.run(MTable.getTables("BQSERVER")), 1.seconds).isEmpty) {
-        val setupAction : DBIO[Unit] = DBIO.seq(bqServer.schema.create)
-        val setupFuture : Future[Unit] = db.run(setupAction)
-        Await.result(setupFuture,1.seconds)
-      }
-//      val result = bqServer.take(1).head.getOrElse(("",0))
-//      val result = for { bqs <- bqServer } yield bqs.head
-
-
-      val queryAction = bqServer.result.headOption
-      val queryFuture = db.run(queryAction)
-      val result = Await.result(queryFuture, 1.seconds).getOrElse(("",0))
-      
-      bqHost = result._1
-      bqPort = result._2
-//    }
-
-    h2DB.actor ! H2DB.GetReady
-
-    // Create bqGateway actor for submitting bq requests
-    context.actorSelection(s"akka.ssl.tcp://BQGateway@$bqHost:$bqPort/user/bqGateway") ! Identify(BQGatewayID)
-
-  }
-
-
-  def uninitialized: Receive = {
-
-    case ActorIdentity(BQGatewayID, Some(ref)) =>
-      bqGateway = BQGatewayWrapper(ref)
-      unstashAll()
-      context.become(initialized)
-    case ActorIdentity(BQGatewayID, None) => println("Didn't find bqGateway")
-    case _ => stash()
-  }
-
-
-  def initialized: Receive = {
-    case Run => 
-
-      // Set the options to use 
-      val wcossOpt =       "-P HWRF-T2O -W 00:01 -n 1 -q debug -J chiltepin"
-      val yellowstoneOpt = "-P P48500053 -W 00:01 -n 1 -q caldera -J chiltepin"
-      val jetOpt =         "-A jetmgmt -l procs=1,partition=njet,walltime=00:05:00 -N chiltepin"
-      val theiaOpt =       "-A nesccmgmt -l procs=1,walltime=00:05:00"
-      val options = jetOpt
-
-      // Set the command to use
-      val wcossCmd = "/gpfs/gp1/u/Christopher.W.Harrop/test/test.sh"
-      val yellowstoneCmd = "/glade/u/home/harrop/test/test.sh"
-      val jetCmd = "/home/Christopher.W.Harrop/test/test.sh"
-      val theiaCmd = "/home/Christopher.W.Harrop/test/test.sh"
-      val command = jetCmd
-
-      "test1" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo1")
-      "test2" usingOptions options runs command withEnvironment Map("FOO" -> "/blah/blah/foo2") dependsOn "test1"
-
-      go
-
-    case Terminated(deadActor) =>
-      logger.actor ! Logger.Info(deadActor.path.name + " has died",2)
-    case Done => 
-      context.system.shutdown()
-  }
-
-
-  def receive = uninitialized
-
-
-}

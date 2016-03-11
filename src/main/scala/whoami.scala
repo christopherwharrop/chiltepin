@@ -39,10 +39,9 @@ trait WhoAmI {
   def whoAmI(): WhoAmIResult = {
     // Call geteuid() in C library to get the effective UID
     val uid = cLib.geteuid()[Int]
-println(s"uid = '$uid'")
+
     // Call getpwuid to look up password entry for the UID
-    val passwdent = cLib.getpwuid(uid)[PasswdDarwin]
-println(s"pw_name = '$passwdent.pw_name'")
+    val passwdent = cLib.getpwuid(uid)[PasswdLinux]
 
     WhoAmIResult(passwdent.pw_name, passwdent.pw_uid, passwdent.pw_gid, passwdent.pw_dir)
   }   

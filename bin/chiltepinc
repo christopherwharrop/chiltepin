@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Get path of Chiltepin
+chiltepin=`dirname $(dirname $(readlink -f $0))`
+
+# Get path of workflow
+workflow=`readlink -f $1`
+
+# Set Java options used to compile the workflow
+export _JAVA_OPTIONS=-Xmx100m
+
+# Compile the code and make a jar
+jar=`echo $workflow | sed 's/.scala$/.jar/'`
+scalac -classpath $chiltepin/target/scala-2.11/root-assembly-1.0.jar  -Xscript Chiltepin -d $jar $workflow
+

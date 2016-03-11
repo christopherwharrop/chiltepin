@@ -25,7 +25,14 @@ lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
     // other settings
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+      {
+        case x if x  startsWith "com/sun/jna/Structure" => MergeStrategy.first
+        case x => old(x)
+      }
+    }
   )
+
 
 lazy val bqserver = (project in file("bqserver")).
   settings(commonSettings: _*).

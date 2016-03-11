@@ -57,7 +57,7 @@ class H2DB(implicit logger: LoggerWrapper) extends Actor {
         val setupFuture : Future[Unit] = db.run(setupAction)
         Await.result(setupFuture,1.seconds)
       }
-      sender ! Workflow.H2DBReady
+      sender ! WFGateway.H2DBReady
     case AddJob(jobid,state) =>
 //      db.withSession {
 //        implicit session =>
