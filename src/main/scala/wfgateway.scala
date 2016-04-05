@@ -48,14 +48,14 @@ class WFGateway extends Actor with Stash with RunCommand with WhoAmI {
 //  var init: Int = 0
 
   // Start the WFGateway
-//  def go(): Unit = {
-//    context.actorSelection("/user/WFGateway/*") ! Transition.Go
-//  }
-
+  def go(): Unit = {
+    context.actorSelection("/user/WFGateway/wfGateway/*") ! Transition.Go
+  }
   
   // Create children before actor starts
   override def preStart() {
-  
+
+    println("WFGateway preStart() begin")  
     // Retrieve the host/port of the bqServer actors from the services database
     var bqHost = ""
     var bqPort = 0
@@ -75,9 +75,14 @@ class WFGateway extends Actor with Stash with RunCommand with WhoAmI {
 
     h2DB.actor ! H2DB.GetReady
 
+//    for ((name,task) <- Workflow.tasks) {
+//      context.actorOf(Transition.props(task), name = name)// ! Transition.Go
+//    }
+
     // Create bqGateway actor for submitting bq requests
     context.actorSelection(s"akka.ssl.tcp://BQGateway@$bqHost:$bqPort/user/bqGateway") ! Identify(BQGatewayID)
 
+    println("WFGateway preStart() end")  
   }
 
 
@@ -89,12 +94,14 @@ class WFGateway extends Actor with Stash with RunCommand with WhoAmI {
       println("Acquired connection to bqGateway")
       context.become(initialized)
     case ActorIdentity(BQGatewayID, None) => println("Did not find bqGateway")
-    case _ => stash()
+    case _ => 
+      stash()
+      println("Stashing message during initialization")
   }
 
 
   def initialized: Receive = {
-//    case Run => 
+    case Run => 
 
       // Set the options to use 
 //      val wcossOpt =       "-P HWRF-T2O -W 00:01 -n 1 -q debug -J chiltepin"
@@ -113,6 +120,12 @@ class WFGateway extends Actor with Stash with RunCommand with WhoAmI {
 //      "test1" runs command usingOptions options withEnvironment Map("FOO" -> "/blah/blah/foo1")
 //      "test2" usingOptions options runs command withEnvironment Map("FOO" -> "/blah/blah/foo2") dependsOn "test1"
 //      "test3" usingOptions options runs command withEnvironment Map("FOO" -> "/blah/blah/foo2") dependsOn "test2"
+
+   
+
+ for ((name,task) <- Workflow.tasks) {
+      context.actorOf(Transition.props(task), name = name) ! Transition.Go
+    }
 
 //      go
 

@@ -6,6 +6,11 @@ import akka.pattern.pipe
 import scala.collection.mutable.ListBuffer
 
 object Transition {
+
+  // Provide a Props for actor creation
+  def props(task: Task)(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper): Props = Props(new Transition(task))
+
+
   case object GetReady
   case class SetCommand(cmd: String)
   case class SetOptions(opt: String)
@@ -18,7 +23,7 @@ object Transition {
   case class StateUpdate(job: BQJob)
 }
 
-class Transition()(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) extends Actor with Stash {
+class Transition(task: Task)(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway: BQGatewayWrapper) extends Actor with Stash {
 
   import Transition._
   implicit val ec = context.dispatcher
@@ -67,10 +72,10 @@ class Transition()(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway:
   def receive: Receive = configuring
 
   def configuring: Receive = {
-    case SetCommand(cmd: String) => command = cmd
-    case SetOptions(opt :String) => options = opt
-    case SetEnvironment(env : Map[String,String]) => environment = env
-    case AddInputDependency(name : String) => inputPlaceNames += name
+//    case SetCommand(cmd: String) => command = cmd
+//    case SetOptions(opt :String) => options = opt
+//    case SetEnvironment(env : Map[String,String]) => environment = env
+//    case AddInputDependency(name : String) => inputPlaceNames += name
     case Go => 
       if (inputPlaceNames.size == 0) {
 
@@ -119,7 +124,7 @@ class Transition()(implicit logger: LoggerWrapper, h2DB: H2DBWrapper, bqGateway:
 
     case Run => 
       logger.actor ! Logger.Info("Asking bqsub to submit the job",2)
-      bqGateway.actor ! BqGateway.Submit(command, options, environment)
+      bqGateway.actor ! BqGateway.Submit(task.cmd, task.opt, task.env)
     case SubmitFailed(bqError) => 
       bqError match {
         case Some(error) => logger.actor ! Logger.Info(s"ERROR: Could not submit job.  ${error.message}",2)

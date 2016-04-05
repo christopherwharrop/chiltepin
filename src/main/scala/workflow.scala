@@ -58,7 +58,7 @@ object Workflow extends RunCommand with WhoAmI {
     val wfGateway = systemGateway.actorOf(Props[WFGateway], name = "wfGateway")
   
     // Run the workflow
-//    wfGateway ! WFGateway.Run
+    wfGateway ! WFGateway.Run
 
 
   }
